@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Mars } from './Mars.js';
 
 let scene, camera, renderer, marsGlobe, controls;
+let slider, sliderKnob;
 
 function init() {
     scene = new THREE.Scene();
@@ -29,12 +30,55 @@ function init() {
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
+
+    createSlider()
 }
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function createSlider() {
+    slider = document.createElement('div');
+    slider.style.position = 'absolute';
+    slider.style.top = '20px';
+    slider.style.right = '20px';
+    slider.style.width = '60px';
+    slider.style.height = '30px';
+    slider.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+    slider.style.borderRadius = '15px';
+    slider.style.cursor = 'pointer';
+
+    sliderKnob = document.createElement('div');
+    sliderKnob.style.position = 'absolute';
+    sliderKnob.style.width = '26px';
+    sliderKnob.style.height = '26px';
+    sliderKnob.style.borderRadius = '13px';
+    sliderKnob.style.backgroundColor = 'white';
+    sliderKnob.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+    // sliderKnob.style.transition = 'left 0.1s';
+
+    slider.appendChild(sliderKnob);
+    document.body.appendChild(slider);
+
+    updateSliderPosition(marsGlobe.isWet);
+
+    slider.addEventListener('click', onSliderClick);
+}
+
+function onSliderClick(event) {
+    const sliderRect = slider.getBoundingClientRect();
+    const clickPosition = event.clientX - sliderRect.left;
+    const isWet = clickPosition > sliderRect.width / 2;
+    marsGlobe.setWetness(isWet);
+    updateSliderPosition(isWet);
+}
+
+function updateSliderPosition(isWet) {
+    sliderKnob.style.left = isWet ? '34px' : '2px';
+    slider.style.backgroundColor = isWet ? 'rgba(0, 191, 255, 0.3)' : 'rgba(255, 255, 255, 0.3)';
 }
 
 function animate() {

@@ -4,6 +4,7 @@ export class Mars {
     constructor(scene) {
         this.scene = scene;
         this.globe = null;
+        this.isWet = true;
         this.setupLighting();
         this.createGlobe();
     }
@@ -12,16 +13,18 @@ export class Mars {
         const geometry = new THREE.SphereGeometry(1, 128, 128);
         const textureLoader = new THREE.TextureLoader();
         
-        const color = textureLoader.load('assets/wet_mars_5.png');           
+        this.wetTexture = textureLoader.load('assets/wet_mars_5.png');
+        this.dryTexture = textureLoader.load('assets/mars_8k_color.jpg');
         const normal = textureLoader.load('assets/mars_8k_normal.jpg');
         
         // Adjust texture properties
-        color.encoding = THREE.sRGBEncoding;
+        this.wetTexture.encoding = THREE.sRGBEncoding;
+        this.dryTexture.encoding = THREE.sRGBEncoding;
 
         // Create a custom shader material
-        const material = new THREE.ShaderMaterial({
+        this.material = new THREE.ShaderMaterial({
             uniforms: {
-                colorMap: { value: color },
+                colorMap: { value: this.wetTexture },
                 normalMap: { value: normal },
                 normalScale: { value: new THREE.Vector2(1, 1) }
             },
@@ -56,7 +59,7 @@ export class Mars {
             `
         });
 
-        this.globe = new THREE.Mesh(geometry, material);
+        this.globe = new THREE.Mesh(geometry, this.material);
         this.scene.add(this.globe);
     }
 
@@ -82,5 +85,11 @@ export class Mars {
     update() {
         // slow rotation
         this.globe.rotation.y += 0.001;
+    }
+
+    setWetness(isWet) {
+        this.isWet = isWet;
+        this.material.uniforms.colorMap.value = this.isWet ? this.wetTexture : this.dryTexture;
+        this.material.needsUpdate = true;
     }
 }
