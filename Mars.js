@@ -12,7 +12,7 @@ export class Mars {
         const geometry = new THREE.SphereGeometry(1, 128, 128);
         const textureLoader = new THREE.TextureLoader();
         
-        const color = textureLoader.load('assets/mars_8k_color.jpg');
+        const color = textureLoader.load('assets/wet_mars_5.png');           
         const normal = textureLoader.load('assets/mars_8k_normal.jpg');
         
         // Adjust texture properties
