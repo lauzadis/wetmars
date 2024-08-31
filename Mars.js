@@ -18,12 +18,42 @@ export class Mars {
         // Adjust texture properties
         color.encoding = THREE.sRGBEncoding;
 
-        const material = new THREE.MeshStandardMaterial({ 
-            map: color,
-            normalMap: normal,
-            normalScale: new THREE.Vector2(1, 1),
-            roughness: 0.8,
-            metalness: 0.2
+        // Create a custom shader material
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                colorMap: { value: color },
+                normalMap: { value: normal },
+                normalScale: { value: new THREE.Vector2(1, 1) }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                varying vec3 vNormal;
+                void main() {
+                    vUv = uv;
+                    vNormal = normalize(normalMatrix * normal);
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D colorMap;
+                uniform sampler2D normalMap;
+                uniform vec2 normalScale;
+                varying vec2 vUv;
+                varying vec3 vNormal;
+                void main() {
+                    vec3 normal = texture2D(normalMap, vUv).rgb * 2.0 - 1.0;
+                    normal.xy *= normalScale;
+                    normal = normalize(normal);
+                    
+                    // Simulate ambient occlusion
+                    float ao = (normal.z + 1.0) * 0.5;
+                    ao = smoothstep(0.0, 1.0, ao);
+                    ao = mix(0.8, 1.0, ao);  // Adjust these values to control the shadow intensity
+                    
+                    vec3 color = texture2D(colorMap, vUv).rgb;
+                    gl_FragColor = vec4(color * ao, 1.0);
+                }
+            `
         });
 
         this.globe = new THREE.Mesh(geometry, material);
