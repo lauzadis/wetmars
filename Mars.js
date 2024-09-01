@@ -82,11 +82,6 @@ export class Mars {
         this.scene.add(fillLight);
     }
 
-    update() {
-        // slow rotation
-        this.globe.rotation.y += 0.001;
-    }
-
     setWetness(isWet) {
         this.isWet = isWet;
         this.material.uniforms.colorMap.value = this.isWet ? this.wetTexture : this.dryTexture;
