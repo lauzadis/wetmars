@@ -92,13 +92,13 @@ function createInfoText() {
     infoText.style.position = 'absolute';
     infoText.style.bottom = '20px';
     infoText.style.right = '20px';
-    infoText.style.width = '300px'; // Adjust width as needed
+    infoText.style.width = '180px';
     infoText.style.textAlign = 'right';
     infoText.style.color = 'white';
     infoText.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     infoText.style.padding = '10px';
     infoText.style.borderRadius = '5px';
-    infoText.style.fontSize = '14px'; // Adjust font size as needed
+    infoText.style.fontSize = '14px';
     infoText.style.lineHeight = '1.4';
     infoText.innerHTML = `
         Made by <a href="https://x.com/mataslauzadis" target="_blank" style="color: #007bff;">Matas Lauzadis</a><br>
