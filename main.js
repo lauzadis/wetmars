@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Mars } from './Mars.js';
 
 let scene, camera, renderer, marsGlobe, controls;
-let slider, sliderKnob, infoText;
+let slider, sliderKnob, infoText, playPauseButton;
 
 function init() {
     scene = new THREE.Scene();
@@ -36,6 +36,7 @@ function init() {
 
     createSlider()
     createInfoText();
+    createPlayPauseButton();
 }
 
 function onWindowResize() {
@@ -105,6 +106,47 @@ function createInfoText() {
     `;
 
     document.body.appendChild(infoText);
+}
+
+function createPlayPauseButton() {
+    playPauseButton = document.createElement('button');
+    playPauseButton.style.position = 'absolute';
+    playPauseButton.style.top = '20px';
+    playPauseButton.style.right = '90px';
+    playPauseButton.style.width = '30px';
+    playPauseButton.style.height = '30px';
+    playPauseButton.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+    playPauseButton.style.border = 'none';
+    playPauseButton.style.borderRadius = '50%';
+    playPauseButton.style.cursor = 'pointer';
+    playPauseButton.style.display = 'flex';
+    playPauseButton.style.justifyContent = 'center';
+    playPauseButton.style.alignItems = 'center';
+
+    const pauseIcon = `<svg width="12" height="12" viewBox="0 0 12 12">
+        <rect width="4" height="12" fill="white"/>
+        <rect x="8" width="4" height="12" fill="white"/>
+    </svg>`;
+
+    playPauseButton.innerHTML = pauseIcon;
+
+    playPauseButton.addEventListener('click', togglePlayPause);
+    document.body.appendChild(playPauseButton);
+}
+
+function togglePlayPause() {
+    controls.autoRotate = !controls.autoRotate;
+    
+    const pauseIcon = `<svg width="12" height="12" viewBox="0 0 12 12">
+        <rect width="4" height="12" fill="white"/>
+        <rect x="8" width="4" height="12" fill="white"/>
+    </svg>`;
+
+    const playIcon = `<svg width="12" height="12" viewBox="-2 0 16 12">
+        <path d="M0 0 L12 6 L0 12 Z" fill="white"/>
+    </svg>`;
+
+    playPauseButton.innerHTML = controls.autoRotate ? pauseIcon : playIcon;
 }
 
 function animate() {
