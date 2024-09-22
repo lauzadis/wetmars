@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Mars } from './Mars.js';
 
 let scene, camera, renderer, marsGlobe, controls;
-let slider, sliderKnob, infoText, playPauseButton;
+let slider, sliderKnob, infoText, playPauseButton, loadingMessage;
 
 function init() {
     scene = new THREE.Scene();
@@ -17,8 +17,10 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    createLoadingMessage();
+
     // Create Mars
-    marsGlobe = new Mars(scene);
+    marsGlobe = new Mars(scene, onMarsLoaded);
 
     // Set up OrbitControls
     controls = new OrbitControls(camera, renderer.domElement);
@@ -147,6 +149,41 @@ function togglePlayPause() {
     </svg>`;
 
     playPauseButton.innerHTML = controls.autoRotate ? pauseIcon : playIcon;
+}
+
+function createLoadingMessage() {
+    loadingMessage = document.createElement('div');
+    loadingMessage.id = 'loading-message';
+    loadingMessage.style.position = 'fixed';
+    loadingMessage.style.top = '50%';
+    loadingMessage.style.left = '50%';
+    loadingMessage.style.transform = 'translate(-50%, -50%)';
+    loadingMessage.style.backgroundColor = 'rgba(0,0,0,0.7)';
+    loadingMessage.style.color = 'white';
+    loadingMessage.style.padding = '20px';
+    loadingMessage.style.borderRadius = '10px';
+    loadingMessage.style.fontFamily = 'Arial, sans-serif';
+    loadingMessage.style.zIndex = '1000';
+    document.body.appendChild(loadingMessage);
+}
+
+function onMarsLoaded() {
+    // Remove loading message
+    loadingMessage.style.display = 'none';
+
+    // Set up OrbitControls
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 1.1;
+    controls.maxDistance = 5;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.33;
+    controls.panSpeed = 0.5;
+
+    // Start animation
+    animate();
 }
 
 function animate() {

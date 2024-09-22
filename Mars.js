@@ -1,23 +1,33 @@
 import * as THREE from 'three';
 
 export class Mars {
-    constructor(scene) {
+    constructor(scene, onLoadingComplete) {
         this.scene = scene;
         this.globe = null;
         this.isWet = true;
+        this.onLoadingComplete = onLoadingComplete;
         this.setupLighting();
-        this.createGlobe();
+        this.loadTextures();
     }
 
-    createGlobe() {
-        const geometry = new THREE.SphereGeometry(1, 128, 128);
-        const textureLoader = new THREE.TextureLoader();
-        
+    loadTextures() {
+        const loadingManager = new THREE.LoadingManager();
+        const textureLoader = new THREE.TextureLoader(loadingManager);
+
+        loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+            const progress = (itemsLoaded / itemsTotal * 100).toFixed(0);
+            this.updateLoadingMessage(`Loading: ${progress}%`);
+        };
+
+        loadingManager.onLoad = () => {
+            this.updateLoadingMessage('');
+            if (this.onLoadingComplete) this.onLoadingComplete();
+        };
+
         this.wetTexture = textureLoader.load('assets/wet_mars_5.png');
         this.dryTexture = textureLoader.load('assets/mars_8k_color.jpg');
         const normal = textureLoader.load('assets/mars_8k_normal.jpg');
-        
-        // Adjust texture properties
+
         this.wetTexture.encoding = THREE.sRGBEncoding;
         this.dryTexture.encoding = THREE.sRGBEncoding;
 
@@ -59,8 +69,16 @@ export class Mars {
             `
         });
 
+        const geometry = new THREE.SphereGeometry(1, 128, 128);
         this.globe = new THREE.Mesh(geometry, this.material);
         this.scene.add(this.globe);
+    }
+
+    updateLoadingMessage(message) {
+        const loadingDiv = document.getElementById('loading-message');
+        if (loadingDiv) {
+            loadingDiv.textContent = message;
+        }
     }
 
     setupLighting() {
