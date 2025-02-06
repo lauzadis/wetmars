@@ -1,3 +1,3 @@
-[wetmars.com](https://www.wetmars.com)
+[wetmars.com](https://wetmars.com)
 
 \- Dedicated to life on Mars
