@@ -38,3 +38,6 @@ dist-ssr
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Local tile pyramid (built by tools/build-tiles)
+tiles-local

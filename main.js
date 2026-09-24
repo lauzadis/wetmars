@@ -3,7 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Mars } from './Mars.js';
 
 let scene, camera, renderer, marsGlobe, controls;
-let slider, sliderKnob, infoText, playPauseButton, loadingMessage;
+let slider, sliderKnob, infoText, playPauseButton, loadingMessage, debugText;
+
+const MARS_RADIUS_KM = 3389.5;
 
 function init() {
     scene = new THREE.Scene();
@@ -27,7 +29,7 @@ function init() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.screenSpacePanning = false;
-    controls.minDistance = 1.1;
+    controls.minDistance = 1.003; // ~10 km above the surface, close to where the finest tiles run out of detail
     controls.maxDistance = 5;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.33;
@@ -39,6 +41,10 @@ function init() {
     createSlider()
     createInfoText();
     createPlayPauseButton();
+    if (new URLSearchParams(window.location.search).has('debug')) {
+        createDebugText();
+        window.wetmars = { camera, controls, marsGlobe };
+    }
 }
 
 function onWindowResize() {
@@ -167,29 +173,61 @@ function createLoadingMessage() {
     document.body.appendChild(loadingMessage);
 }
 
+/**
+ * Debug readout (add ?debug to the URL): altitude and tile streaming stats.
+ */
+function createDebugText() {
+    debugText = document.createElement('div');
+    debugText.style.position = 'absolute';
+    debugText.style.bottom = '20px';
+    debugText.style.left = '20px';
+    debugText.style.color = 'white';
+    debugText.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    debugText.style.padding = '10px';
+    debugText.style.borderRadius = '5px';
+    debugText.style.fontFamily = 'monospace';
+    debugText.style.fontSize = '12px';
+    debugText.style.whiteSpace = 'pre';
+    document.body.appendChild(debugText);
+}
+
+function updateDebugText() {
+    if (!debugText) return;
+    const altitudeKm = (camera.position.length() - 1) * MARS_RADIUS_KM;
+    const stats = marsGlobe.tileStats;
+    debugText.textContent = `altitude  ${altitudeKm.toFixed(1)} km\n` + (stats
+        ? `level     ${stats.finestLevel}\ntiles     ${stats.rendered} drawn, ${stats.textures} cached\nloading   ${stats.loading} active, ${stats.queued} queued`
+        : 'tiles     - (dry Mars, or no tile pyramid)');
+}
+
+/**
+ * The globe has a radius of 1, so distances near the surface are tiny. Keep the clip planes tight
+ * around what can be seen, and slow orbiting/zooming down in proportion to the altitude.
+ */
+function updateCameraForAltitude() {
+    const distance = camera.position.length();
+    const altitude = Math.max(distance - 1, 1e-5);
+    camera.near = altitude * 0.5;
+    camera.far = Math.sqrt(Math.max(distance * distance - 1, 0)) * 1.05 + altitude; // horizon distance
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld();
+
+    controls.zoomSpeed = 2.5 * altitude / distance; // each wheel step scales the altitude, not the distance
+    controls.rotateSpeed = Math.min(1, altitude);
+    controls.autoRotateSpeed = 0.33 * Math.min(1, altitude);
+}
+
 function onMarsLoaded() {
-    // Remove loading message
     loadingMessage.style.display = 'none';
-
-    // Set up OrbitControls
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.25;
-    controls.screenSpacePanning = false;
-    controls.minDistance = 1.1;
-    controls.maxDistance = 5;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.33;
-    controls.panSpeed = 0.5;
-
-    // Start animation
-    animate();
 }
 
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    updateCameraForAltitude();
+    marsGlobe.update(camera, renderer);
     renderer.render(scene, camera);
+    updateDebugText();
 }
 
 init();
