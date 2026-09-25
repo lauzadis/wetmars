@@ -96,21 +96,21 @@ function updateSliderPosition(isWet) {
 }
 
 /**
- * A small "i" icon in the bottom-right; hovering (or tapping, on touch) expands a panel with credits.
+ * A small "i" icon in the bottom-left; hovering (or tapping, on touch) expands a panel with
+ * credits to its right.
  */
 function createInfoText() {
     infoText = document.createElement('div');
     infoText.style.position = 'absolute';
     infoText.style.bottom = '20px';
-    infoText.style.right = '20px';
+    infoText.style.left = '20px';
     infoText.style.display = 'flex';
-    infoText.style.flexDirection = 'column';
-    infoText.style.alignItems = 'flex-end';
+    infoText.style.flexDirection = 'row';
+    infoText.style.alignItems = 'center';
 
     const panel = document.createElement('div');
-    panel.style.width = '180px';
-    panel.style.marginBottom = '8px';
-    panel.style.textAlign = 'right';
+    panel.style.whiteSpace = 'nowrap';
+    panel.style.marginLeft = '8px';
     panel.style.color = 'white';
     panel.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     panel.style.padding = '10px';
@@ -119,11 +119,11 @@ function createInfoText() {
     panel.style.lineHeight = '1.4';
     panel.style.opacity = '0';
     panel.style.transform = 'scale(0.95)';
-    panel.style.transformOrigin = 'bottom right';
+    panel.style.transformOrigin = 'left center';
     panel.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
     panel.style.pointerEvents = 'none';
     panel.innerHTML = `
-        Made by <a href="https://x.com/mataslauzadis" target="_blank" style="color: #007bff;">Matas Lauzadis</a><br>
+        Made by <a href="https://x.com/mataslauzadis" target="_blank" style="color: #007bff;">Matas Lauzadis</a>
         with data from <a href="https://x.com/CJHandmer" target="_blank" style="color: #007bff;">Casey Handmer</a>
     `;
 
@@ -155,8 +155,8 @@ function createInfoText() {
     });
     document.addEventListener('click', hidePanel);
 
-    infoText.appendChild(panel);
     infoText.appendChild(icon);
+    infoText.appendChild(panel);
     document.body.appendChild(infoText);
 }
 
