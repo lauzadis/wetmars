@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Mars } from './Mars.js';
 
 let scene, camera, renderer, marsGlobe, controls;
-let slider, sliderKnob, infoText, playPauseButton, loadingMessage, debugText;
+let slider, sliderKnob, infoText, creditsPanel, playPauseButton, loadingMessage, debugText;
 
 const MARS_RADIUS_KM = 3389.5;
 
@@ -22,7 +22,7 @@ function init() {
     createLoadingMessage();
 
     // Create Mars
-    marsGlobe = new Mars(scene);
+    marsGlobe = new Mars(scene, updateCredits);
 
     // Set up OrbitControls
     controls = new OrbitControls(camera, renderer.domElement);
@@ -88,11 +88,28 @@ function onSliderClick(event) {
     const next = !marsGlobe.isWet
     marsGlobe.setWetness(next);
     updateSliderPosition(next);
+    updateCredits(); // switches immediately if the target side is already loaded (cached)
 }
 
 function updateSliderPosition(isWet) {
     sliderKnob.style.left = isWet ? '34px' : '2px';
     slider.style.backgroundColor = isWet ? 'rgba(0, 191, 255, 0.3)' : 'rgba(255, 255, 255, 0.3)';
+}
+
+/**
+ * Wet always credits Casey Handmer's render (with a link to his profile). Dry credits whatever
+ * data source actually loaded — the THEMIS/Viking tile pyramid if that's up, falling back to the
+ * same Casey credit otherwise (still loading, or using the legacy single-texture fallback, whose
+ * own provenance isn't tracked).
+ */
+function updateCredits() {
+    if (!creditsPanel) return;
+    const casey = `with data from <a href="https://x.com/CJHandmer" target="_blank" style="color: #007bff;">Casey Handmer</a>`;
+    const dataCredit = (!marsGlobe.isWet && marsGlobe.attribution) ? `with data from ${marsGlobe.attribution}` : casey;
+    creditsPanel.innerHTML = `
+        Made by <a href="https://x.com/mataslauzadis" target="_blank" style="color: #007bff;">Matas Lauzadis</a>
+        ${dataCredit}
+    `;
 }
 
 /**
@@ -108,7 +125,8 @@ function createInfoText() {
     infoText.style.flexDirection = 'row';
     infoText.style.alignItems = 'center';
 
-    const panel = document.createElement('div');
+    creditsPanel = document.createElement('div');
+    const panel = creditsPanel;
     panel.style.whiteSpace = 'nowrap';
     panel.style.marginLeft = '8px';
     panel.style.color = 'white';
@@ -122,10 +140,7 @@ function createInfoText() {
     panel.style.transformOrigin = 'left center';
     panel.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
     panel.style.pointerEvents = 'none';
-    panel.innerHTML = `
-        Made by <a href="https://x.com/mataslauzadis" target="_blank" style="color: #007bff;">Matas Lauzadis</a>
-        with data from <a href="https://x.com/CJHandmer" target="_blank" style="color: #007bff;">Casey Handmer</a>
-    `;
+    updateCredits();
 
     const icon = document.createElement('div');
     icon.textContent = 'i';

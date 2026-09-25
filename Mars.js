@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { TileGlobe } from './TileGlobe.js';
 
-// Where the tile pyramid (tools/build-tiles) is served from. Dev: ./tiles-local via vite.config.js.
-const TILE_BASE_URL = import.meta.env.VITE_TILE_BASE_URL ?? '/tiles';
+// Where each tile pyramid (tools/build-tiles/build.mjs and build-dry.mjs) is served from.
+// Dev: ./tiles-local and ./tiles-dry-local via vite.config.js.
+const WET_TILE_BASE_URL = import.meta.env.VITE_TILE_BASE_URL ?? '/tiles';
+const DRY_TILE_BASE_URL = import.meta.env.VITE_DRY_TILE_BASE_URL ?? '/tiles-dry';
 const TILES_TIMEOUT_MS = 10000;
 
 const VERTEX_SHADER = `
@@ -39,30 +41,38 @@ export class Mars {
         this.isWet = true;
         this.onLoadingComplete = onLoadingComplete;
         this.textureLoader = new THREE.TextureLoader();
-        this.tileGlobe = null;
-        this.wetGlobe = null;
-        this.dryGlobe = null;
+        // Each side is { group: THREE.Object3D, tileGlobe: TileGlobe | null } once loaded, or null.
+        // tileGlobe is null for the legacy single-texture fallback, which needs no per-frame update.
+        this.wet = null;
+        this.dry = null;
         this.dryLoading = false;
         this.loadWet();
     }
 
-    /** Wet Mars streams from the tile pyramid at TILE_BASE_URL; there's no local fallback for it. */
-    async loadWet() {
-        this.updateLoadingMessage('Loading…');
-        const tiles = new TileGlobe({ baseUrl: TILE_BASE_URL });
+    /** Streams a tile pyramid at baseUrl; throws (after cleaning up) if it never becomes ready. */
+    async loadTileGlobe(baseUrl) {
+        const tiles = new TileGlobe({ baseUrl });
         try {
             await tiles.init();
-            this.tileGlobe = tiles;
             this.scene.add(tiles.group);
             const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), TILES_TIMEOUT_MS));
             await Promise.race([tiles.whenReady, timeout]);
-            this.wetGlobe = tiles.group;
+            return { group: tiles.group, tileGlobe: tiles };
+        } catch (error) {
+            this.scene.remove(tiles.group);
+            throw error;
+        }
+    }
+
+    /** Wet Mars streams from the tile pyramid at WET_TILE_BASE_URL; there's no local fallback for it. */
+    async loadWet() {
+        this.updateLoadingMessage('Loading…');
+        try {
+            this.wet = await this.loadTileGlobe(WET_TILE_BASE_URL);
             this.updateLoadingMessage('');
         } catch (error) {
             console.error('Failed to load the wet Mars tile pyramid:', error);
-            this.tileGlobe = null;
-            this.scene.remove(tiles.group);
-            this.wetGlobe = null;
+            this.wet = null;
             // Left showing (not cleared to '') so the error stays visible; dry Mars still works via the toggle.
             this.updateLoadingMessage('Failed to load Mars terrain. Try refreshing, or switch to dry Mars →');
         }
@@ -70,7 +80,7 @@ export class Mars {
         if (this.onLoadingComplete) this.onLoadingComplete();
     }
 
-    /** Dry Mars: a single 8K equirectangular texture on a sphere, shaded with the 8K normal map. */
+    /** Legacy dry Mars: a single 8K equirectangular texture on a sphere, shaded with the 8K normal map. */
     async createShadedGlobe(colorUrl) {
         this.normalMap ??= this.textureLoader.loadAsync('assets/mars_8k_normal.jpg');
         const [colorMap, normalMap] = await Promise.all([this.textureLoader.loadAsync(colorUrl), this.normalMap]);
@@ -98,39 +108,62 @@ export class Mars {
 
     setWetness(isWet) {
         this.isWet = isWet;
-        if (!isWet && !this.dryGlobe && !this.dryLoading) this.loadDry();
+        if (!isWet && !this.dry && !this.dryLoading) this.loadDry();
         this.applyVisibility();
     }
 
-    /** The dry texture is only fetched the first time someone flips the switch. */
+    /**
+     * Dry Mars is only fetched the first time someone flips the switch. It streams from the same
+     * kind of tile pyramid as wet, colorized from THEMIS + Viking imagery rather than Casey
+     * Handmer's flood-simulation render. If that pyramid isn't hosted yet (DRY_TILE_BASE_URL
+     * unset or unreachable — e.g. it hasn't been uploaded to production), falls back to the
+     * legacy single 8K texture rather than leaving dry Mars broken.
+     */
     async loadDry() {
         this.dryLoading = true;
         this.updateLoadingMessage('Loading dry Mars…');
         try {
-            this.dryGlobe = await this.createShadedGlobe('assets/mars_8k_color.jpg');
+            this.dry = await this.loadTileGlobe(DRY_TILE_BASE_URL);
         } catch (error) {
-            console.error('Failed to load dry Mars:', error);
+            console.warn('Dry Mars tile pyramid unavailable, using the legacy texture:', error);
+            try {
+                this.dry = { group: await this.createShadedGlobe('assets/mars_8k_color.jpg'), tileGlobe: null };
+            } catch (fallbackError) {
+                console.error('Failed to load the dry Mars fallback texture:', fallbackError);
+                this.dry = null;
+            }
         }
         this.dryLoading = false;
         this.updateLoadingMessage('');
         this.applyVisibility();
+        if (this.onLoadingComplete) this.onLoadingComplete();
+    }
+
+    /** Whichever side (wet/dry) is actually on screen right now — dry only once it's loaded. */
+    get active() {
+        return !this.isWet && this.dry ? this.dry : this.wet;
     }
 
     applyVisibility() {
-        // Keep showing wet Mars until the dry texture has arrived.
-        const showDry = !this.isWet && this.dryGlobe !== null;
-        if (this.wetGlobe) this.wetGlobe.visible = !showDry;
-        if (this.dryGlobe) this.dryGlobe.visible = showDry;
+        // Keep showing wet Mars until the dry side has arrived.
+        const active = this.active;
+        if (this.wet) this.wet.group.visible = active === this.wet;
+        if (this.dry) this.dry.group.visible = active === this.dry;
     }
 
     update(camera, renderer) {
-        if (this.tileGlobe && this.wetGlobe?.visible !== false) this.tileGlobe.update(camera, renderer);
+        this.active?.tileGlobe?.update(camera, renderer);
     }
 
     get tileStats() {
-        // Stats freeze once the tile globe stops updating (dry showing, or no pyramid at all);
-        // returning null here rather than the frozen object keeps the debug readout honest.
-        if (!this.tileGlobe || this.dryGlobe?.visible) return null;
-        return this.tileGlobe.stats;
+        // Stats freeze once a tile globe stops updating (it's not the active side); returning
+        // null here rather than a frozen object keeps the debug readout honest. Also null for the
+        // legacy fallback texture, which has no tileGlobe at all.
+        return this.active?.tileGlobe?.stats ?? null;
+    }
+
+    /** Credit for whichever data source is actually showing; null for the legacy fallback texture. */
+    get attribution() {
+        return this.active?.tileGlobe?.attribution ?? null;
     }
 }

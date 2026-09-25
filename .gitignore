@@ -39,5 +39,6 @@ dist-ssr
 ehthumbs.db
 Thumbs.db
 
-# Local tile pyramid (built by tools/build-tiles)
+# Local tile pyramids (built by tools/build-tiles)
 tiles-local
+tiles-dry-local

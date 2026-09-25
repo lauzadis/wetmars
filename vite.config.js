@@ -3,15 +3,14 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
-// Dev only: serves the locally built tile pyramid (tools/build-tiles) at /tiles.
-// Point TILES_DIR at another disk if the tiles don't live in ./tiles-local.
-function localTiles() {
-    const root = path.resolve(process.env.TILES_DIR ?? 'tiles-local');
+// Dev only: serves a locally built tile pyramid (tools/build-tiles) at the given URL prefix.
+function localTiles(urlPrefix, dirEnvVar, defaultDir) {
+    const root = path.resolve(process.env[dirEnvVar] ?? defaultDir);
     const types = { '.webp': 'image/webp', '.json': 'application/json' };
     return {
-        name: 'local-tiles',
+        name: `local-tiles${urlPrefix}`,
         configureServer(server) {
-            server.middlewares.use('/tiles', async (req, res) => {
+            server.middlewares.use(urlPrefix, async (req, res) => {
                 // Answer 404 ourselves: falling through would make Vite return index.html with a 200.
                 const file = path.join(root, decodeURIComponent(new URL(req.url, 'http://x').pathname));
                 try {
@@ -29,5 +28,9 @@ function localTiles() {
 }
 
 export default defineConfig({
-    plugins: [localTiles()],
+    // Point TILES_DIR / DRY_TILES_DIR at another disk if the tiles don't live in these defaults.
+    plugins: [
+        localTiles('/tiles', 'TILES_DIR', 'tiles-local'),
+        localTiles('/tiles-dry', 'DRY_TILES_DIR', 'tiles-dry-local'),
+    ],
 });
