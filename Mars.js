@@ -46,7 +46,7 @@ export class Mars {
         this.loadWet();
     }
 
-    /** Wet Mars streams from the tile pyramid; without one it falls back to the single 8K texture. */
+    /** Wet Mars streams from the tile pyramid at TILE_BASE_URL; there's no local fallback for it. */
     async loadWet() {
         this.updateLoadingMessage('Loading…');
         const tiles = new TileGlobe({ baseUrl: TILE_BASE_URL });
@@ -57,19 +57,21 @@ export class Mars {
             const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), TILES_TIMEOUT_MS));
             await Promise.race([tiles.whenReady, timeout]);
             this.wetGlobe = tiles.group;
+            this.updateLoadingMessage('');
         } catch (error) {
-            console.warn('Tile pyramid unavailable, using the legacy wet texture:', error);
+            console.error('Failed to load the wet Mars tile pyramid:', error);
             this.tileGlobe = null;
             this.scene.remove(tiles.group);
-            this.wetGlobe = await this.createLegacyGlobe('assets/wet_mars_5.png');
+            this.wetGlobe = null;
+            // Left showing (not cleared to '') so the error stays visible; dry Mars still works via the toggle.
+            this.updateLoadingMessage('Failed to load Mars terrain. Try refreshing, or switch to dry Mars →');
         }
-        this.updateLoadingMessage('');
         this.applyVisibility();
         if (this.onLoadingComplete) this.onLoadingComplete();
     }
 
-    /** A single equirectangular texture on a sphere, shaded with the 8K normal map. */
-    async createLegacyGlobe(colorUrl) {
+    /** Dry Mars: a single 8K equirectangular texture on a sphere, shaded with the 8K normal map. */
+    async createShadedGlobe(colorUrl) {
         this.normalMap ??= this.textureLoader.loadAsync('assets/mars_8k_normal.jpg');
         const [colorMap, normalMap] = await Promise.all([this.textureLoader.loadAsync(colorUrl), this.normalMap]);
         const material = new THREE.ShaderMaterial({
@@ -105,7 +107,7 @@ export class Mars {
         this.dryLoading = true;
         this.updateLoadingMessage('Loading dry Mars…');
         try {
-            this.dryGlobe = await this.createLegacyGlobe('assets/mars_8k_color.jpg');
+            this.dryGlobe = await this.createShadedGlobe('assets/mars_8k_color.jpg');
         } catch (error) {
             console.error('Failed to load dry Mars:', error);
         }

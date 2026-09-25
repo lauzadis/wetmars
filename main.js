@@ -22,7 +22,7 @@ function init() {
     createLoadingMessage();
 
     // Create Mars
-    marsGlobe = new Mars(scene, onMarsLoaded);
+    marsGlobe = new Mars(scene);
 
     // Set up OrbitControls
     controls = new OrbitControls(camera, renderer.domElement);
@@ -215,10 +215,6 @@ function updateCameraForAltitude() {
     controls.zoomSpeed = 2.5 * altitude / distance; // each wheel step scales the altitude, not the distance
     controls.rotateSpeed = Math.min(1, altitude);
     controls.autoRotateSpeed = 0.33 * Math.min(1, altitude);
-}
-
-function onMarsLoaded() {
-    loadingMessage.style.display = 'none';
 }
 
 function animate() {
