@@ -95,24 +95,68 @@ function updateSliderPosition(isWet) {
     slider.style.backgroundColor = isWet ? 'rgba(0, 191, 255, 0.3)' : 'rgba(255, 255, 255, 0.3)';
 }
 
+/**
+ * A small "i" icon in the bottom-right; hovering (or tapping, on touch) expands a panel with credits.
+ */
 function createInfoText() {
     infoText = document.createElement('div');
     infoText.style.position = 'absolute';
     infoText.style.bottom = '20px';
     infoText.style.right = '20px';
-    infoText.style.width = '180px';
-    infoText.style.textAlign = 'right';
-    infoText.style.color = 'white';
-    infoText.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    infoText.style.padding = '10px';
-    infoText.style.borderRadius = '5px';
-    infoText.style.fontSize = '14px';
-    infoText.style.lineHeight = '1.4';
-    infoText.innerHTML = `
+    infoText.style.display = 'flex';
+    infoText.style.flexDirection = 'column';
+    infoText.style.alignItems = 'flex-end';
+
+    const panel = document.createElement('div');
+    panel.style.width = '180px';
+    panel.style.marginBottom = '8px';
+    panel.style.textAlign = 'right';
+    panel.style.color = 'white';
+    panel.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    panel.style.padding = '10px';
+    panel.style.borderRadius = '5px';
+    panel.style.fontSize = '14px';
+    panel.style.lineHeight = '1.4';
+    panel.style.opacity = '0';
+    panel.style.transform = 'scale(0.95)';
+    panel.style.transformOrigin = 'bottom right';
+    panel.style.transition = 'opacity 0.15s ease, transform 0.15s ease';
+    panel.style.pointerEvents = 'none';
+    panel.innerHTML = `
         Made by <a href="https://x.com/mataslauzadis" target="_blank" style="color: #007bff;">Matas Lauzadis</a><br>
         with data from <a href="https://x.com/CJHandmer" target="_blank" style="color: #007bff;">Casey Handmer</a>
     `;
 
+    const icon = document.createElement('div');
+    icon.textContent = 'i';
+    icon.style.width = '30px';
+    icon.style.height = '30px';
+    icon.style.borderRadius = '50%';
+    icon.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+    icon.style.display = 'flex';
+    icon.style.alignItems = 'center';
+    icon.style.justifyContent = 'center';
+    icon.style.cursor = 'pointer';
+    icon.style.fontFamily = 'Georgia, serif';
+    icon.style.fontStyle = 'italic';
+    icon.style.fontWeight = 'bold';
+    icon.style.color = 'white';
+    icon.style.userSelect = 'none';
+
+    const showPanel = () => { panel.style.opacity = '1'; panel.style.transform = 'scale(1)'; panel.style.pointerEvents = 'auto'; };
+    const hidePanel = () => { panel.style.opacity = '0'; panel.style.transform = 'scale(0.95)'; panel.style.pointerEvents = 'none'; };
+
+    // Hover for desktop; click toggles too so the icon also works on touch screens.
+    infoText.addEventListener('mouseenter', showPanel);
+    infoText.addEventListener('mouseleave', hidePanel);
+    icon.addEventListener('click', (event) => {
+        event.stopPropagation();
+        panel.style.opacity === '1' ? hidePanel() : showPanel();
+    });
+    document.addEventListener('click', hidePanel);
+
+    infoText.appendChild(panel);
+    infoText.appendChild(icon);
     document.body.appendChild(infoText);
 }
 
