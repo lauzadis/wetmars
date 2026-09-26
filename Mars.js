@@ -46,12 +46,19 @@ export class Mars {
         this.wet = null;
         this.dry = null;
         this.dryLoading = false;
+        // TileGlobes currently being loaded (wet at startup, dry after a toggle — possibly both at
+        // once, if someone toggles before wet finishes). update() must drive these directly: a
+        // TileGlobe only becomes fetchable-and-ready by having update() called on it repeatedly
+        // (that's what actually requests and loads its tiles), but it isn't the "active" side (and
+        // so wouldn't otherwise get ticked) until after it's already ready — a deadlock without this.
+        this.loadingTileGlobes = new Set();
         this.loadWet();
     }
 
     /** Streams a tile pyramid at baseUrl; throws (after cleaning up) if it never becomes ready. */
     async loadTileGlobe(baseUrl) {
         const tiles = new TileGlobe({ baseUrl });
+        this.loadingTileGlobes.add(tiles);
         try {
             await tiles.init();
             this.scene.add(tiles.group);
@@ -61,6 +68,8 @@ export class Mars {
         } catch (error) {
             this.scene.remove(tiles.group);
             throw error;
+        } finally {
+            this.loadingTileGlobes.delete(tiles);
         }
     }
 
@@ -152,7 +161,11 @@ export class Mars {
     }
 
     update(camera, renderer) {
-        this.active?.tileGlobe?.update(camera, renderer);
+        // Drive any in-progress load(s) so they can actually become ready (see the constructor
+        // comment), plus whichever side is already loaded and on screen.
+        for (const tiles of this.loadingTileGlobes) tiles.update(camera, renderer);
+        const active = this.active?.tileGlobe;
+        if (active && !this.loadingTileGlobes.has(active)) active.update(camera, renderer);
     }
 
     get tileStats() {
